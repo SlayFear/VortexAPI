@@ -17,6 +17,10 @@
                 "texto": "Te gusta el color Morado",
                 "fecha": "2025-03-06T21:20:41.920Z",
                 "fecha_actualizacion": "2025-03-06T22:03:01.516Z"
+            },
+            {
+                "texto": "Error al procesar tu pregunta.",
+                "fecha": "2025-03-06T23:42:05.719Z"
             }
         ],
         "promesa": [
