@@ -21,6 +21,22 @@
             {
                 "texto": "Error al procesar tu pregunta.",
                 "fecha": "2025-03-06T23:42:05.719Z"
+            },
+            {
+                "texto": "\\boxed{Darth Vader es un personaje de la saga de \"Star Wars\" que originalmente se llamaba Anakin Skywalker. Es un poderoso Sith Lord y el principal antagonista en la trilogía original de Star Wars, y también es el padre de Luke Skywalker y Leia Organa.}",
+                "fecha": "2025-03-07T23:30:54.270Z"
+            },
+            {
+                "texto": "\\boxed{\"Darth Vader, also known as Anakin Skywalker, is a central character in the \"Star Wars\" saga who transitions from a Jedi Knight to a Sith Lord.\"}",
+                "fecha": "2025-03-07T23:34:03.803Z"
+            },
+            {
+                "texto": "\\boxed{x=2}",
+                "fecha": "2025-03-07T23:34:48.353Z"
+            },
+            {
+                "texto": "\\boxed{\\left(\\frac{4}{3}, \\frac{5}{3}\\right)}",
+                "fecha": "2025-03-07T23:36:09.679Z"
             }
         ],
         "promesa": [

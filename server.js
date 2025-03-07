@@ -9,20 +9,20 @@ const app = express();
 const PORT = 3000;
 const JSON_FILE = "vortex_memorias.json"; // Archivo donde se guardan los recuerdos
 
-app.use(express.json()); 
-app.use(cors()); 
+app.use(express.json());
+app.use(cors());
 
-// 📌 Configurar DeepSeek API
+// 📌 Configurar OpenRouter para usar DeepSeek R1 Zero (free)
 const openai = new OpenAI({
-    baseURL: "https://api.deepseek.com", 
-    apiKey: process.env.DEEPSEEK_API_KEY, 
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey:  process.env.OPENROUTER_API_KEY, // 🔥 La API Key debe estar en .env
 });
 
 // 📌 Función para limpiar texto
 const normalizarTexto = (texto) => {
     if (!texto || typeof texto !== "string") return "";
     return texto.toLowerCase()
-        .replace(/[^\w\s]/gi, '') 
+        .replace(/[^\w\s]/gi, '')
         .replace(/\s+/g, ' ')
         .trim();
 };
@@ -58,21 +58,21 @@ const limpiarDuplicados = () => {
     console.log("✅ Limpieza de duplicados completada.");
 };
 
-// 📌 Función para hacer preguntas a DeepSeek
+// 📌 Función para hacer preguntas a DeepSeek R1 Zero
 async function preguntarADeepSeek(pregunta) {
     try {
         const respuesta = await openai.chat.completions.create({
-            model: "deepseek-chat",
+            model: "deepseek/deepseek-r1-zero:free", 
             messages: [{ role: "user", content: pregunta }],
-            stream: false, 
+            stream: false,
         });
 
         return respuesta.choices[0].message.content.trim();
     } catch (error) {
-        console.error("❌ Error al conectar con DeepSeek:", error);
+        console.error("❌ Error al conectar con OpenRouter:", error);
 
         if (error.status === 402) {
-            return "Error: No tengo saldo en DeepSeek. 🙃 Recarga tu cuenta o prueba otra API.";
+            return "Error: No tengo saldo en OpenRouter. 😞 Recarga tu cuenta o prueba otra API gratuita.";
         }
 
         return "Error al procesar tu pregunta.";
