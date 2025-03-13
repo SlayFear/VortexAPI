@@ -58,11 +58,73 @@ const limpiarDuplicados = () => {
     console.log("✅ Limpieza de duplicados completada.");
 };
 
-// 📌 Función para hacer preguntas a DeepSeek R1 Zero
-async function preguntarADeepSeek(pregunta) {
+// 📌 Función para buscar respuestas en la memoria antes de preguntar a la IA
+const buscarEnMemoria = (pregunta) => {
+    let memoria = leerMemoria();
+    let textoPregunta = normalizarTexto(pregunta);
+
+    // 🔍 Buscar en toda la memoria (acta_nacimiento, creador, recuerdos)
+    let respuestas = [];
+
+    // 📌 Buscar en el acta de nacimiento
+    Object.entries(memoria.acta_nacimiento).forEach(([clave, valor]) => {
+        if (typeof valor === "string" && stringSimilarity.compareTwoStrings(normalizarTexto(valor), textoPregunta) >= 0.5) {
+            respuestas.push(`Según mi acta de nacimiento, ${clave}: ${valor}`);
+        }
+    });
+
+    // 📌 Buscar en información del creador
+    Object.entries(memoria.creador).forEach(([clave, valor]) => {
+        if (typeof valor === "string" && stringSimilarity.compareTwoStrings(normalizarTexto(valor), textoPregunta) >= 0.5) {
+            respuestas.push(`Sobre mi creador DJ, ${clave}: ${valor}`);
+        }
+    });
+
+    // 🔹 Buscar en la sección "creador"
+    if (textoPregunta.includes("creador") || textoPregunta.includes("quién te hizo") || textoPregunta.includes("quién te creó")) {
+        respuestas.push(`Mi creador es ${memoria.creador.nombre_real}, pero todos lo conocen como DJ. Es un ingeniero en software, antes era DJ en raves y además tiene dos gatos.`);
+    }
+
+
+    if (textoPregunta.includes("mascotas") || textoPregunta.includes("gatos")) {
+        let mascotas = memoria.creador.mascotas.map(m => `${m.nombre}, ${m.descripcion}`).join(", ");
+        respuestas.push(`DJ tiene estas mascotas: ${mascotas}.`);
+    }
+
+    if (textoPregunta.includes("promesas") || textoPregunta.includes("recuerdos importantes")) {
+        let promesas = memoria.recuerdos.promesa.map(p => `- ${p}`).join("\n");
+        respuestas.push(`Estas son algunas de mis promesas:\n${promesas}`);
+    }
+    
+
+    // 📌 Buscar en recuerdos importantes
+    memoria.recuerdos.memorias_importantes.forEach((recuerdo) => {
+        if (stringSimilarity.compareTwoStrings(normalizarTexto(recuerdo.texto), textoPregunta) >= 0.5) {
+            respuestas.push(`Recuerdo esto: "${recuerdo.texto}"`);
+        }
+    });
+
+    // 📌 Si encontró respuestas en la memoria, las devuelve en un solo texto
+    if (respuestas.length > 0) {
+        return respuestas.join("\n");
+    }
+
+    return null; // Si no encontró nada, devuelve null para preguntar a la IA
+};
+
+// 📌 Función para hacer preguntas a la IA
+async function preguntarAVortex(pregunta) {
+    // 🔍 Buscar en la memoria antes de preguntar a la IA
+    const respuestaMemoria = buscarEnMemoria(pregunta);
+    if (respuestaMemoria) {
+        console.log("🔍 Respuesta encontrada en la memoria:", respuestaMemoria);
+        return respuestaMemoria; // Si encontró algo relevante, lo devuelve sin preguntar a la IA
+    }
+    console.log("🧐 No encontré la respuesta en la memoria, preguntando a la IA...");
+
     try {
         const respuesta = await openai.chat.completions.create({
-            model: "deepseek/deepseek-r1-zero:free", 
+            model: "google/gemini-2.0-flash-exp:free",
             messages: [{ role: "user", content: pregunta }],
             stream: false,
         });
@@ -79,24 +141,32 @@ async function preguntarADeepSeek(pregunta) {
     }
 }
 
-// 📌 Endpoint para hacer preguntas a Vortex con DeepSeek
+// 📌 Endpoint para hacer preguntas a Vortex
 app.post("/preguntar", async (req, res) => {
     const { pregunta } = req.body;
     if (!pregunta) return res.status(400).json({ error: "Falta la pregunta en el cuerpo de la solicitud." });
 
     console.log("📝 Pregunta recibida:", pregunta);
-    const respuesta = await preguntarADeepSeek(pregunta);
-    console.log("🔍 Respuesta de DeepSeek:", respuesta);
 
-    // 📌 Decisión de Vortex: Guardar respuestas valiosas
-    if (respuesta.length > 10) { // Solo guarda respuestas largas
-        let data = leerMemoria();
-        data.recuerdos.memorias_importantes.push({ texto: respuesta, fecha: new Date().toISOString() });
-        guardarMemoria(data);
-        limpiarDuplicados();
+    // 🔍 Primero buscamos en la memoria
+    let respuestaMemoria = buscarEnMemoria(pregunta);
+    if (respuestaMemoria) {
+        console.log("🔍 Respuesta encontrada en la memoria:", respuestaMemoria);
+        return res.json({ pregunta, respuesta: respuestaMemoria });
     }
 
-    res.json({ pregunta, respuesta });
+    // 🤖 Si no hay respuesta en la memoria, preguntamos a la IA
+    const respuestaIA = await preguntarAVortex(pregunta);
+    console.log("🔍 Respuesta de la IA:", respuestaIA);
+
+    // 🧠 Guardar respuestas importantes en la memoria
+    // if (respuestaIA.length > 10) { // Solo guarda respuestas largas
+    //     let data = leerMemoria();
+    //     data.recuerdos.memorias_importantes.push({ texto: respuestaIA, fecha: new Date().toISOString() });
+    //     guardarMemoria(data);
+    // }
+
+    res.json({ pregunta, respuesta: respuestaIA });
 });
 
 // 📌 Endpoint para agregar un recuerdo manualmente
