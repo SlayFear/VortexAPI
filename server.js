@@ -134,35 +134,39 @@ app.post("/preguntar", async (req, res) => {
         });
     }
 
-    if (requestType === "IntentRequest") {
-        const intentPregunta = req.body.request?.intent?.slots?.texto?.value;
-        
-        if (!intentPregunta) {
-            return res.json({
-                version: "1.0",
-                response: {
-                    outputSpeech: {
-                        type: "PlainText",
-                        text: "No entendí la pregunta. ¿Puedes repetirla?"
-                    },
-                    shouldEndSession: true
-                }
-            });
-        }
+if (requestType === "IntentRequest") {
+    const intent = req.body.request.intent;
+    const slotTexto = intent?.slots?.texto?.value;
 
-        const respuestaIA = await preguntarAVortex(intentPregunta);
+    console.log("📥 Intent recibido:", JSON.stringify(intent, null, 2));
+    console.log("📥 Texto capturado:", slotTexto);
 
+    if (!slotTexto) {
         return res.json({
             version: "1.0",
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: respuestaIA
+                    text: "No entendí tu pregunta. ¿Puedes repetirla claramente?"
                 },
-                shouldEndSession: true
+                shouldEndSession: false
             }
         });
     }
+
+    const respuestaIA = await preguntarAVortex(slotTexto);
+
+    return res.json({
+        version: "1.0",
+        response: {
+            outputSpeech: {
+                type: "PlainText",
+                text: respuestaIA
+            },
+            shouldEndSession: true
+        }
+    });
+}
 
     // fallback por si viene otro tipo
     return res.json({
