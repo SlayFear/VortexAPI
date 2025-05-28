@@ -119,17 +119,62 @@ async function preguntarAVortex(pregunta) {
 }
 
 app.post("/preguntar", async (req, res) => {
-    const { pregunta } = req.body;
-    if (!pregunta) return res.status(400).json({ error: "Falta la pregunta en el cuerpo de la solicitud." });
+    const requestType = req.body.request?.type;
 
-    console.log("📝 Pregunta recibida:", pregunta);
+    if (requestType === "LaunchRequest") {
+        return res.json({
+            version: "1.0",
+            response: {
+                outputSpeech: {
+                    type: "PlainText",
+                    text: "Hola, soy Vortex. ¿Qué quieres preguntarme?"
+                },
+                shouldEndSession: false
+            }
+        });
+    }
 
-    let respuestaMemoria = buscarEnMemoria(pregunta);
-    if (respuestaMemoria) return res.json({ pregunta, respuesta: respuestaMemoria });
+    if (requestType === "IntentRequest") {
+        const intentPregunta = req.body.request?.intent?.slots?.texto?.value;
 
-    const respuestaIA = await preguntarAVortex(pregunta);
-    console.log("🔍 Respuesta de la IA:", respuestaIA);
-    res.json({ pregunta, respuesta: respuestaIA });
+        if (!intentPregunta) {
+            return res.json({
+                version: "1.0",
+                response: {
+                    outputSpeech: {
+                        type: "PlainText",
+                        text: "No entendí la pregunta. ¿Puedes repetirla?"
+                    },
+                    shouldEndSession: true
+                }
+            });
+        }
+
+        const respuestaIA = await preguntarAVortex(intentPregunta);
+
+        return res.json({
+            version: "1.0",
+            response: {
+                outputSpeech: {
+                    type: "PlainText",
+                    text: respuestaIA
+                },
+                shouldEndSession: true
+            }
+        });
+    }
+
+    // fallback por si viene otro tipo
+    return res.json({
+        version: "1.0",
+        response: {
+            outputSpeech: {
+                type: "PlainText",
+                text: "No pude entender tu solicitud. Intenta nuevamente."
+            },
+            shouldEndSession: true
+        }
+    });
 });
 
 app.post("/recuerdos", (req, res) => {
