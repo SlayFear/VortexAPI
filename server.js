@@ -6,7 +6,7 @@ const cors = require("cors");
 const stringSimilarity = require("string-similarity");
 
 const app = express();
-const PORT = 3000;
+const PORT = 4000;
 const JSON_FILE = "vortex_memorias.json"; // Archivo donde se guardan los recuerdos
 const CHAT_MODEL = "llama3-8b-8192"; // Puedes cambiar por "llama3-70b-8192"
 
