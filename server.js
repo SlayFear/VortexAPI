@@ -136,7 +136,7 @@ app.post("/preguntar", async (req, res) => {
 
     if (requestType === "IntentRequest") {
         const intentPregunta = req.body.request?.intent?.slots?.texto?.value;
-
+        
         if (!intentPregunta) {
             return res.json({
                 version: "1.0",
