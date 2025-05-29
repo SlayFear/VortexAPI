@@ -155,7 +155,7 @@ app.post("/preguntar", async (req, res) => {
         response: {
           outputSpeech: {
             type: "SSML",
-            ssml: `<speak><voice name="Pedro">Hasta luego, fue un placer hablar contigo.</voice></speak>`
+            ssml: `<speak><voice name="Andrés">Hasta luego, fue un placer hablar contigo.</voice></speak>`
           },
           shouldEndSession: true
         }
@@ -170,7 +170,7 @@ app.post("/preguntar", async (req, res) => {
       response: {
         outputSpeech: {
           type: "SSML",
-          ssml: `<speak><voice name="Pedro">${respuestaSanitizada}</voice></speak>`
+          ssml: `<speak><voice name="Andrés">${respuestaSanitizada}</voice></speak>`
         },
         reprompt: {
           outputSpeech: {
