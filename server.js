@@ -119,6 +119,9 @@ async function preguntarAVortex(pregunta) {
 }
 
 app.post("/preguntar", async (req, res) => {
+    console.log("📥 Petición recibida:");
+    console.log(JSON.stringify(req.body, null, 2));
+
     const requestType = req.body.request?.type;
 
     if (requestType === "LaunchRequest") {
@@ -127,46 +130,84 @@ app.post("/preguntar", async (req, res) => {
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: "Hola, soy Vortex. ¿Qué quieres preguntarme?"
+                    text: "Hola, soy Vortex. Puedes preguntarme lo que quieras."
+                },
+                reprompt: {
+                    outputSpeech: {
+                        type: "PlainText",
+                        text: "¿Sobre qué tema te gustaría saber?"
+                    }
                 },
                 shouldEndSession: false
             }
         });
     }
 
-if (requestType === "IntentRequest") {
-    const intent = req.body.request.intent;
-    const slotTexto = intent?.slots?.texto?.value;
+    if (requestType === "IntentRequest") {
+        const intent = req.body.request.intent;
+        const slotTexto = intent?.slots?.texto?.value;
 
-    console.log("📥 Intent recibido:", JSON.stringify(intent, null, 2));
-    console.log("📥 Texto capturado:", slotTexto);
+        console.log("📥 Intent recibido:", JSON.stringify(intent, null, 2));
+        console.log("🧠 Texto capturado:", slotTexto);
 
-    if (!slotTexto) {
+        if (!slotTexto) {
+            return res.json({
+                version: "1.0",
+                response: {
+                    outputSpeech: {
+                        type: "PlainText",
+                        text: "No entendí tu pregunta. ¿Puedes repetirla?"
+                    },
+                    reprompt: {
+                        outputSpeech: {
+                            type: "PlainText",
+                            text: "Por ejemplo, puedes preguntarme quién es mi creador."
+                        }
+                    },
+                    shouldEndSession: false
+                }
+            });
+        }
+
+        //  Detectar si el usuario quiere terminar la conversación
+        const textoLower = slotTexto.toLowerCase();
+        if (
+            textoLower.includes("salir") ||
+            textoLower.includes("gracias") ||
+            textoLower.includes("terminar") ||
+            textoLower.includes("adiós")
+        ) {
+            return res.json({
+                version: "1.0",
+                response: {
+                    outputSpeech: {
+                        type: "PlainText",
+                        text: "Hasta luego, fue un placer hablar contigo."
+                    },
+                    shouldEndSession: true
+                }
+            });
+        }
+
+        const respuestaIA = await preguntarAVortex(slotTexto);
+
         return res.json({
             version: "1.0",
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: "No entendí tu pregunta. ¿Puedes repetirla claramente?"
+                    text: respuestaIA
+                },
+                reprompt: {
+                    outputSpeech: {
+                        type: "PlainText",
+                        text: "¿Quieres preguntarme algo más?"
+                    }
                 },
                 shouldEndSession: false
             }
         });
     }
-
-    const respuestaIA = await preguntarAVortex(slotTexto);
-
-    return res.json({
-        version: "1.0",
-        response: {
-            outputSpeech: {
-                type: "PlainText",
-                text: respuestaIA
-            },
-            shouldEndSession: true
-        }
-    });
-}
 
     // fallback por si viene otro tipo
     return res.json({
@@ -174,9 +215,9 @@ if (requestType === "IntentRequest") {
         response: {
             outputSpeech: {
                 type: "PlainText",
-                text: "No pude entender tu solicitud. Intenta nuevamente."
+                text: "No pude procesar tu solicitud. ¿Quieres intentar otra vez?"
             },
-            shouldEndSession: true
+            shouldEndSession: false
         }
     });
 });
