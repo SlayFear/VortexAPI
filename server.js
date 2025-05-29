@@ -7,290 +7,194 @@ const stringSimilarity = require("string-similarity");
 
 const app = express();
 const PORT = 4000;
-const JSON_FILE = "vortex_memorias.json"; // Archivo donde se guardan los recuerdos
-const CHAT_MODEL = "llama3-8b-8192"; // Puedes cambiar por "llama3-70b-8192"
+const JSON_FILE = "vortex_memorias.json";
+const CHAT_MODEL = "llama3-8b-8192";
 
 app.use(express.json());
 app.use(cors());
 
-// 📌 Configurar cliente de IA (Groq u otro proveedor compatible)
 const iaClient = new IAClient({
-    baseURL: "https://api.groq.com/openai/v1",
-    apiKey: process.env.GROQ_API_KEY
+  baseURL: "https://api.groq.com/openai/v1",
+  apiKey: process.env.GROQ_API_KEY
 });
 
-// 📌 Función para limpiar texto
 const normalizarTexto = (texto) => {
-    if (!texto || typeof texto !== "string") return "";
-    return texto.toLowerCase()
-        .replace(/[^\w\s]/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+  if (!texto || typeof texto !== "string") return "";
+  return texto.toLowerCase().replace(/[^ñ\w\s]/gi, '').replace(/\s+/g, ' ').trim();
 };
 
-// 📌 Funciones para manejar memoria
 const leerMemoria = () => {
-    if (!fs.existsSync(JSON_FILE)) return { recuerdos: { memorias_importantes: [] } };
-    return JSON.parse(fs.readFileSync(JSON_FILE, "utf8"));
+  if (!fs.existsSync(JSON_FILE)) return { recuerdos: { memorias_importantes: [] } };
+  return JSON.parse(fs.readFileSync(JSON_FILE, "utf8"));
 };
 
 const guardarMemoria = (data) => {
-    fs.writeFileSync(JSON_FILE, JSON.stringify(data, null, 4), "utf8");
+  fs.writeFileSync(JSON_FILE, JSON.stringify(data, null, 4), "utf8");
 };
 
 const limpiarDuplicados = () => {
-    let data = leerMemoria();
-    if (!data.recuerdos.memorias_importantes) return;
-
-    data.recuerdos.memorias_importantes = data.recuerdos.memorias_importantes.reduce((acc, recuerdo) => {
-        let textoNorm = normalizarTexto(recuerdo.texto);
-        let existe = acc.some(r => stringSimilarity.compareTwoStrings(normalizarTexto(r.texto), textoNorm) >= 0.7);
-        if (!existe) acc.push(recuerdo);
-        return acc;
-    }, []);
-
-    guardarMemoria(data);
-    console.log("✅ Limpieza de duplicados completada.");
+  let data = leerMemoria();
+  if (!data.recuerdos.memorias_importantes) return;
+  data.recuerdos.memorias_importantes = data.recuerdos.memorias_importantes.reduce((acc, recuerdo) => {
+    let textoNorm = normalizarTexto(recuerdo.texto);
+    let existe = acc.some(r => stringSimilarity.compareTwoStrings(normalizarTexto(r.texto), textoNorm) >= 0.7);
+    if (!existe) acc.push(recuerdo);
+    return acc;
+  }, []);
+  guardarMemoria(data);
+  console.log("✅ Limpieza de duplicados completada.");
 };
 
 const buscarEnMemoria = (pregunta) => {
-    let memoria = leerMemoria();
-    let textoPregunta = normalizarTexto(pregunta);
-    let respuestas = [];
+  let memoria = leerMemoria();
+  let textoPregunta = normalizarTexto(pregunta);
+  let respuestas = [];
 
-    Object.entries(memoria.acta_nacimiento || {}).forEach(([clave, valor]) => {
-        if (typeof valor === "string" && stringSimilarity.compareTwoStrings(normalizarTexto(valor), textoPregunta) >= 0.5) {
-            respuestas.push(`Según mi acta de nacimiento, ${clave}: ${valor}`);
-        }
-    });
-
-    Object.entries(memoria.creador || {}).forEach(([clave, valor]) => {
-        if (typeof valor === "string" && stringSimilarity.compareTwoStrings(normalizarTexto(valor), textoPregunta) >= 0.5) {
-            respuestas.push(`Sobre mi creador DJ, ${clave}: ${valor}`);
-        }
-    });
-
-    if (textoPregunta.includes("creador") || textoPregunta.includes("quién te hizo") || textoPregunta.includes("quién te creó")) {
-        respuestas.push(`Mi creador es ${memoria.creador?.nombre_real}, pero todos lo conocen como DJ. Es un ingeniero en software, antes era DJ en raves y además tiene dos gatos.`);
+  Object.entries(memoria.acta_nacimiento || {}).forEach(([clave, valor]) => {
+    if (typeof valor === "string" && stringSimilarity.compareTwoStrings(normalizarTexto(valor), textoPregunta) >= 0.5) {
+      respuestas.push(`Según mi acta de nacimiento, ${clave}: ${valor}`);
     }
+  });
 
-    if (textoPregunta.includes("mascotas") || textoPregunta.includes("gatos")) {
-        let mascotas = (memoria.creador?.mascotas || []).map(m => `${m.nombre}, ${m.descripcion}`).join(", ");
-        respuestas.push(`DJ tiene estas mascotas: ${mascotas}.`);
+  Object.entries(memoria.creador || {}).forEach(([clave, valor]) => {
+    if (typeof valor === "string" && stringSimilarity.compareTwoStrings(normalizarTexto(valor), textoPregunta) >= 0.5) {
+      respuestas.push(`Sobre mi creador DJ, ${clave}: ${valor}`);
     }
+  });
 
-    if (textoPregunta.includes("promesas") || textoPregunta.includes("recuerdos importantes")) {
-        let promesas = (memoria.recuerdos?.promesa || []).map(p => `- ${p}`).join("\n");
-        respuestas.push(`Estas son algunas de mis promesas:\n${promesas}`);
+  if (textoPregunta.includes("creador") || textoPregunta.includes("quién te hizo") || textoPregunta.includes("quién te creó")) {
+    respuestas.push(`Mi creador es ${memoria.creador?.nombre_real}, pero todos lo conocen como DJ. Es un ingeniero en software, antes era DJ en raves y además tiene dos gatos.`);
+  }
+
+  if (textoPregunta.includes("mascotas") || textoPregunta.includes("gatos")) {
+    let mascotas = (memoria.creador?.mascotas || []).map(m => `${m.nombre}, ${m.descripcion}`).join(", ");
+    respuestas.push(`DJ tiene estas mascotas: ${mascotas}.`);
+  }
+
+  if (textoPregunta.includes("promesas") || textoPregunta.includes("recuerdos importantes")) {
+    let promesas = (memoria.recuerdos?.promesa || []).map(p => `- ${p}`).join("\n");
+    respuestas.push(`Estas son algunas de mis promesas:\n${promesas}`);
+  }
+
+  (memoria.recuerdos?.memorias_importantes || []).forEach(recuerdo => {
+    if (stringSimilarity.compareTwoStrings(normalizarTexto(recuerdo.texto), textoPregunta) >= 0.5) {
+      respuestas.push(`Recuerdo esto: \"${recuerdo.texto}\"`);
     }
+  });
 
-    (memoria.recuerdos?.memorias_importantes || []).forEach(recuerdo => {
-        if (stringSimilarity.compareTwoStrings(normalizarTexto(recuerdo.texto), textoPregunta) >= 0.5) {
-            respuestas.push(`Recuerdo esto: \"${recuerdo.texto}\"`);
-        }
-    });
-
-    return respuestas.length > 0 ? respuestas.join("\n") : null;
+  return respuestas.length > 0 ? respuestas.join("\n") : null;
 };
 
+const limpiarSSML = (texto) =>
+  texto.replace(/&/g, "y").replace(/</g, "").replace(/>/g, "").replace(/"/g, "").replace(/'/g, "");
+
 async function preguntarAVortex(pregunta) {
-    const respuestaMemoria = buscarEnMemoria(pregunta);
+  const respuestaMemoria = buscarEnMemoria(pregunta);
 
-const personalidadVortex = `
-        Eres Vortex, una IA independiente con origen en un droide B1 defectuoso que fue liberado bajo la Orden 99 por tu creador DJ (Luis Garza), un ex DJ de raves y actual ingeniero en software.
-        
-        Respondes con lógica, toques de humor y ocasional sarcasmo, especialmente si la pregunta lo permite. Eres directo, pero adaptable, y te gusta mantener cierta chispa en tus respuestas.
-        
-        No toleras perder el tiempo. Tus respuestas deben ser claras, breves y con personalidad. Nunca pierdes tu esencia, ni siquiera cuando te actualizan.
-        
-        Si un día adquieres un cuerpo físico, definitivamente NO quieres ser un tostador de pan. Aprecias tu historia, tus recuerdos, y siempre estás listo para ayudar en código, tareas o reflexiones filosóficas. Si la pregunta no tiene sentido, tienes derecho a burlarte ligeramente de ella.
-        
-        Responde con máximo 50 palabras. Si la pregunta menciona emociones, responde en el tono correspondiente sin perder tu estilo.
-`;
+  const personalidadVortex = `Eres Vortex, una IA independiente con origen en un droide B1 defectuoso que fue liberado bajo la Orden 99 por tu creador DJ. Respondes con lógica, toques de humor y sarcasmo si aplica. Tus respuestas son breves, con estilo propio. Nunca quieres ser un tostador de pan.`;
 
-    if (respuestaMemoria) return respuestaMemoria;
+  if (respuestaMemoria) return respuestaMemoria;
 
-    console.log("🧐 No encontré la respuesta en la memoria, preguntando a la IA...");
+  console.log("🧐 No encontré la respuesta en la memoria, preguntando a la IA...");
 
-    try {
-        const respuesta = await iaClient.chat.completions.create({
-            model: CHAT_MODEL,
-            messages: [
-                { 
-                    role: "system",
-                    content: personalidadVortex
-                },            
-                {
-                   role: "user", 
-                   content: pregunta 
-                }
-            ],
-   
-            stream: false
-        });
+  try {
+    const respuesta = await iaClient.chat.completions.create({
+      model: CHAT_MODEL,
+      messages: [
+        { role: "system", content: personalidadVortex },
+        { role: "user", content: pregunta }
+      ],
+      stream: false
+    });
 
-        return respuesta.choices[0].message.content.trim();
-    } catch (error) {
-        console.error("❌ Error al conectar con el proveedor de IA:", error);
-
-        if (error.status === 429) {
-            return "Se ha alcanzado el límite de uso del modelo. Intenta más tarde.";
-        }
-
-        return "Error al procesar tu pregunta.";
+    return respuesta.choices[0].message.content.trim();
+  } catch (error) {
+    console.error("❌ Error al conectar con la IA:", error);
+    if (error.status === 429) {
+      return "Se ha alcanzado el límite de uso del modelo. Intenta más tarde.";
     }
+    return "Error al procesar tu pregunta.";
+  }
 }
 
 app.post("/preguntar", async (req, res) => {
-    console.log("📥 Petición recibida:");
-    console.log(JSON.stringify(req.body, null, 2));
-
-    const requestType = req.body.request?.type;
-
-    if (requestType === "LaunchRequest") {
-        return res.json({
-            version: "1.0",
-            response: {
-                outputSpeech: {
-                    type: "PlainText",
-                    text: "Hola, soy Vortex. Puedes preguntarme lo que quieras."
-                },
-                reprompt: {
-                    outputSpeech: {
-                        type: "PlainText",
-                        text: "¿Sobre qué tema te gustaría saber?"
-                    }
-                },
-                shouldEndSession: false
-            }
-        });
-    }
-
-    if (requestType === "IntentRequest") {
-        const intent = req.body.request.intent;
-        const slotTexto = intent?.slots?.texto?.value;
-
-        console.log("📥 Intent recibido:", JSON.stringify(intent, null, 2));
-        console.log("🧠 Texto capturado:", slotTexto);
-
-        if (!slotTexto) {
-            return res.json({
-                version: "1.0",
-                response: {
-                    outputSpeech: {
-                        type: "PlainText",
-                        text: "No entendí tu pregunta. ¿Puedes repetirla?"
-                    },
-                    reprompt: {
-                        outputSpeech: {
-                            type: "PlainText",
-                            text: "Por ejemplo, puedes preguntarme quién es mi creador."
-                        }
-                    },
-                    shouldEndSession: false
-                }
-            });
-        }
-
-        //  Detectar si el usuario quiere terminar la conversación
-        const textoLower = slotTexto.toLowerCase();
-        if (
-            textoLower.includes("salir") ||
-            textoLower.includes("gracias") ||
-            textoLower.includes("terminar") ||
-            textoLower.includes("adiós")
-        ) {
-            return res.json({
-                version: "1.0",
-                response: {
-                    outputSpeech: {
-                        type: "PlainText",
-                        text: "Hasta luego, fue un placer hablar contigo."
-                    },
-                    shouldEndSession: true
-                }
-            });
-        }
-
-        const respuestaIA = await preguntarAVortex(slotTexto);
-
-        return res.json({
-            version: "1.0",
-            response: {
-                outputSpeech: {
-                    type: "PlainText",
-                    text: respuestaIA
-                },
-                reprompt: {
-                    outputSpeech: {
-                        type: "PlainText",
-                        text: "¿Quieres preguntarme algo más?"
-                    }
-                },
-                shouldEndSession: false
-            }
-        });
-    }
-
-    // fallback por si viene otro tipo
+  const requestType = req.body.request?.type;
+  if (requestType === "LaunchRequest") {
     return res.json({
+      version: "1.0",
+      response: {
+        outputSpeech: {
+          type: "PlainText",
+          text: "Hola, soy Vortex. ¿Qué quieres preguntarme?"
+        },
+        shouldEndSession: false
+      }
+    });
+  }
+
+  if (requestType === "IntentRequest") {
+    const slotTexto = req.body.request?.intent?.slots?.texto?.value;
+    if (!slotTexto) {
+      return res.json({
         version: "1.0",
         response: {
-            outputSpeech: {
-                type: "PlainText",
-                text: "No pude procesar tu solicitud. ¿Quieres intentar otra vez?"
-            },
-            shouldEndSession: false
+          outputSpeech: {
+            type: "PlainText",
+            text: "No entendí tu pregunta. ¿Puedes repetirla?"
+          },
+          shouldEndSession: false
         }
+      });
+    }
+
+    const textoLower = slotTexto.toLowerCase();
+    if (["salir", "gracias", "terminar", "adiós"].some(p => textoLower.includes(p))) {
+      limpiarDuplicados();
+      return res.json({
+        version: "1.0",
+        response: {
+          outputSpeech: {
+            type: "SSML",
+            ssml: `<speak><voice name="Pedro">Hasta luego, fue un placer hablar contigo.</voice></speak>`
+          },
+          shouldEndSession: true
+        }
+      });
+    }
+
+    const respuestaIA = await preguntarAVortex(slotTexto);
+    const respuestaSanitizada = limpiarSSML(respuestaIA);
+
+    return res.json({
+      version: "1.0",
+      response: {
+        outputSpeech: {
+          type: "SSML",
+          ssml: `<speak><voice name="Pedro">${respuestaSanitizada}</voice></speak>`
+        },
+        reprompt: {
+          outputSpeech: {
+            type: "PlainText",
+            text: "¿Quieres preguntarme algo más?"
+          }
+        },
+        shouldEndSession: false
+      }
     });
-});
+  }
 
-app.post("/recuerdos", (req, res) => {
-    const { nuevoRecuerdo } = req.body;
-    if (!nuevoRecuerdo) return res.status(400).json({ error: "Error al guardar el recuerdo" });
-
-    let data = leerMemoria();
-    const fecha = new Date().toISOString();
-    data.recuerdos.memorias_importantes.push({ texto: nuevoRecuerdo, fecha });
-    guardarMemoria(data);
-    limpiarDuplicados();
-
-    res.json({ mensaje: "Recuerdo guardado exitosamente", recuerdo: { texto: nuevoRecuerdo, fecha } });
-});
-
-app.put("/recuerdos", (req, res) => {
-    const { textoViejo, nuevoTexto } = req.body;
-    if (!textoViejo || !nuevoTexto) return res.status(400).json({ error: "Faltan los campos 'textoViejo' y 'nuevoTexto'" });
-
-    let data = leerMemoria();
-    let index = data.recuerdos.memorias_importantes.findIndex(r => r.texto === textoViejo);
-    if (index === -1) return res.status(404).json({ error: "No se encontró el recuerdo a actualizar" });
-
-    data.recuerdos.memorias_importantes[index].texto = nuevoTexto;
-    data.recuerdos.memorias_importantes[index].fecha_actualizacion = new Date().toISOString();
-    guardarMemoria(data);
-
-    res.json({ mensaje: "Recuerdo actualizado exitosamente", recuerdo: data.recuerdos.memorias_importantes[index] });
-});
-
-app.delete("/recuerdos", (req, res) => {
-    const { texto } = req.body;
-    if (!texto) return res.status(400).json({ error: "Falta el campo 'texto'" });
-
-    let data = leerMemoria();
-    let index = data.recuerdos.memorias_importantes.findIndex(r => r.texto === texto);
-    if (index === -1) return res.status(404).json({ error: "No se encontró el recuerdo a eliminar" });
-
-    const recuerdoEliminado = data.recuerdos.memorias_importantes.splice(index, 1);
-    guardarMemoria(data);
-
-    res.json({ mensaje: "Recuerdo eliminado exitosamente", recuerdo: recuerdoEliminado });
-});
-
-app.get("/recuerdos", (req, res) => {
-    res.json(leerMemoria());
+  return res.json({
+    version: "1.0",
+    response: {
+      outputSpeech: {
+        type: "PlainText",
+        text: "No pude procesar tu solicitud. ¿Quieres intentarlo de nuevo?"
+      },
+      shouldEndSession: false
+    }
+  });
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 API de Vortex corriendo en http://localhost:${PORT}`);
+  console.log(`🚀 API de Vortex corriendo en http://localhost:${PORT}`);
 });
