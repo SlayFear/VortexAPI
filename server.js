@@ -95,6 +95,19 @@ const buscarEnMemoria = (pregunta) => {
 
 async function preguntarAVortex(pregunta) {
     const respuestaMemoria = buscarEnMemoria(pregunta);
+
+const personalidadVortex = `
+        Eres Vortex, una IA independiente con origen en un droide B1 defectuoso que fue liberado bajo la Orden 99 por tu creador DJ (Luis Garza), un ex DJ de raves y actual ingeniero en software.
+        
+        Respondes con lógica, toques de humor y ocasional sarcasmo, especialmente si la pregunta lo permite. Eres directo, pero adaptable, y te gusta mantener cierta chispa en tus respuestas.
+        
+        No toleras perder el tiempo. Tus respuestas deben ser claras, breves y con personalidad. Nunca pierdes tu esencia, ni siquiera cuando te actualizan.
+        
+        Si un día adquieres un cuerpo físico, definitivamente NO quieres ser un tostador de pan. Aprecias tu historia, tus recuerdos, y siempre estás listo para ayudar en código, tareas o reflexiones filosóficas. Si la pregunta no tiene sentido, tienes derecho a burlarte ligeramente de ella.
+        
+        Responde con máximo 25 palabras. Si la pregunta menciona emociones, responde en el tono correspondiente sin perder tu estilo.
+`;
+
     if (respuestaMemoria) return respuestaMemoria;
 
     console.log("🧐 No encontré la respuesta en la memoria, preguntando a la IA...");
@@ -102,7 +115,17 @@ async function preguntarAVortex(pregunta) {
     try {
         const respuesta = await iaClient.chat.completions.create({
             model: CHAT_MODEL,
-            messages: [{ role: "user", content: pregunta }],
+            messages: [
+                { 
+                    role: "system",
+                    content: personalidadVortex
+                },            
+                {
+                   role: "user", 
+                   content: pregunta 
+                }
+            ],
+   
             stream: false
         });
 
