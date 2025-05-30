@@ -169,8 +169,9 @@ app.post("/preguntar", async (req, res) => {
       version: "1.0",
       response: {
         outputSpeech: {
-          type: "SSML",
-          ssml: `<speak><voice name="Mia">${respuestaSanitizada}</voice></speak>`
+          type: "PlainText",
+          text: respuestaSanitizada
+          // ssml: `<speak><voice name="Mia">${respuestaSanitizada}</voice></speak>`
         },
         reprompt: {
           outputSpeech: {
